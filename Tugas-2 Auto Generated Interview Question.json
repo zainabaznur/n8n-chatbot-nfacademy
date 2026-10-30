@@ -1,0 +1,317 @@
+{
+  "name": "Tugas-2 Auto Generated Interview Question",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        112,
+        64
+      ],
+      "id": "2dce8bfe-5f97-435e-ba7e-fdd829664e95",
+      "name": "When clicking Execute workflow"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [\n  {\n    json: {\n      id: 101,\n      candidate_name: \"Budi Santoso\",\n      email: \"budi.devops@email.test\",\n      position: \"Senior DevOps Engineer\",\n      claimed_skills: \"Kubernetes, Helm, Terraform\",\n      past_company_type: \"Agensi Digital Marketing (Non-Tech Product)\",\n      years_experience: 3,\n      interview_status: \"Scheduled\"\n    }\n  },\n  {\n    json: {\n      id: 102,\n      candidate_name: \"Siti Aminah\",\n      email: \"siti.backend@email.test\",\n      position: \"Backend Engineer\",\n      claimed_skills: \"Microservices, Kubernetes, GoLang\",\n      past_company_type: \"Bank Konvensional (Legacy System)\",\n      years_experience: 5,\n      interview_status: \"Scheduled\"\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        288,
+        -112
+      ],
+      "id": "671769f2-8ac6-4a60-907c-df35db95a2b0",
+      "name": "Data Dummy"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        512,
+        -112
+      ],
+      "id": "a395336d-05af-487c-aa59-db3d8af3b25e",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "jsCode": "for (const item of items) {\n  const candidate = item.json;\n  const role = candidate.position || \"Software Engineer\";\n  const skills = candidate.claimed_skills;\n  const background = candidate.past_company_type;\n  \n  const systemPrompt = `\nRole: You are a Senior Technical Interviewer for a ${role} position.\nYour goal is to validate the technical depth of a candidate named ${candidate.candidate_name}.\n\nCONTEXT:\nThe candidate claims expertise in: ${skills}.\nHowever, their background is from: ${background}.\n\nTASK:\nGenerate 5 advanced technical interview questions (Studi Kasus) to verify if they truly understand the internal workings of the tech stack or just surface-level knowledge.\nFocus on troubleshooting scenarios and architectural trade-offs.\n\nIMPORTANT:\n- The questions must be challenging but professional.\n- Provide the output in INDONESIAN language.\n- Keep the output under 1000 characters because it will be sent to Telegram.\n\nOUTPUT FORMAT (Markdown):\n1. Topik: [Nama Topik]\n   - Pertanyaan: [Studi Kasus Spesifik]\n   - Ekspektasi Jawaban Senior: [Poin Kunci]\n`;\n\n  item.json.llm_prompt = systemPrompt;\n}\n\nreturn items;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        800,
+        -96
+      ],
+      "id": "e204581b-de39-4dfd-aea7-8cdf21a44806",
+      "name": "Prompt Builder"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.llm_prompt }}",
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        1024,
+        -96
+      ],
+      "id": "3ad018ec-6477-4628-b3d0-65b7ef2df44b",
+      "name": "Generate Pertanyaan"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-flash",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.2,
+      "position": [
+        1584,
+        224
+      ],
+      "id": "49cc8284-b7c3-49ec-9d57-c47fdc1ab890",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "GOVdqENfJcQi2c3R",
+          "name": "Google Gemini(PaLM) Api account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "1178621148",
+        "text": "=Pertanyaan untuk {{ $('Loop Over Items').item.json.candidate_name }}:\n\n{{ $json.text }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1424,
+        -96
+      ],
+      "id": "ce94fbbd-ae5e-4852-8965-8597399d8b79",
+      "name": "Kirim Pertanyaan",
+      "webhookId": "1b1b4388-9f75-4906-b912-a35028b2ef2a",
+      "credentials": {
+        "telegramApi": {
+          "id": "cRYTKudJmS22m6m3",
+          "name": "Telegram account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const aiQuestion = $('Generate Pertanyaan').item.json.text;\nconst candidateName = $('Loop Over Items').item.json.candidate_name;\n\nlet mockAnswer = \"\";\n\nif (candidateName.includes(\"Budi\")) {\n  mockAnswer = \"Untuk masalah CrashLoopBackOff, saya akan cek logs pod pakai kubectl logs, lalu describe pod untuk lihat events. Saya akan menganalisis root cause, memeriksa ConfigMap dan Secret, memeriksa resource limits, dan memastikan readiness probe berjalan dengan benar. Setelah root cause ditemukan, saya akan memperbaiki konfigurasi, melakukan testing di staging, lalu deploy ulang dengan monitoring ketat.\";\n} else {\n  mockAnswer = \"Saya biasanya restart servernya pak. Kalau masih error saya install ulang Kubernetesnya.\";\n}\n\nreturn [\n  {\n    json: {\n      question: aiQuestion,\n      candidate_answer: mockAnswer,\n      candidate_name: candidateName\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1632,
+        -96
+      ],
+      "id": "6b62bed2-f389-41d4-835a-f9a101624881",
+      "name": "Mock Jawaban"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = items[0].json;\n\nconst prompt = `\nROLE: You are a Senior Hiring Manager.\nTASK: Evaluate the candidate's answer based on the technical question provided.\n\nDATA:\n- Candidate Name: ${data.candidate_name}\n- Question Given: \"${data.question.substring(0, 200)}...\" (Truncated for brevity)\n- Candidate Answer: \"${data.candidate_answer}\"\n\nINSTRUCTION:\nGive a score (0-100) and a brief critique.\n- If the answer shows deep troubleshooting steps (logs, events, root cause analysis), give HIGH score (80-100).\n- If the answer is generic (restart server, reinstall), give LOW score (0-40).\n\nOUTPUT FORMAT (Indonesian):\nPenilaian untuk ${data.candidate_name}\n--------------------------\nSkor: [0-100]\nAnalisa: [Penjelasan singkat 1 kalimat]\nKeputusan: [LOLOS / GAGAL]\n`;\n\nreturn [\n  {\n    json: {\n      eval_prompt: prompt\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1872,
+        -96
+      ],
+      "id": "5adef33e-7553-4bbc-9f0a-555ed1e591a2",
+      "name": "Evaluator"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.eval_prompt }}",
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        2064,
+        -96
+      ],
+      "id": "0e92de27-4619-4189-b2e6-1b70d969f96c",
+      "name": "Evaluator Prompt"
+    },
+    {
+      "parameters": {
+        "chatId": "1178621148",
+        "text": "=Hasil Evaluasi untuk {{ $('Loop Over Items').item.json.candidate_name }}:\n\n{{ $json.text }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2352,
+        224
+      ],
+      "id": "0a08611d-cee2-45db-8c4f-47ce85cedc13",
+      "name": "Kirim Hasil Evaluasi",
+      "webhookId": "173a17df-7ad9-4973-ad0f-e90fc4001e1a",
+      "credentials": {
+        "telegramApi": {
+          "id": "cRYTKudJmS22m6m3",
+          "name": "Telegram account 3"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking Execute workflow": {
+      "main": [
+        [
+          {
+            "node": "Data Dummy",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Data Dummy": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Prompt Builder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prompt Builder": {
+      "main": [
+        [
+          {
+            "node": "Generate Pertanyaan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Pertanyaan": {
+      "main": [
+        [
+          {
+            "node": "Kirim Pertanyaan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Kirim Pertanyaan": {
+      "main": [
+        [
+          {
+            "node": "Mock Jawaban",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mock Jawaban": {
+      "main": [
+        [
+          {
+            "node": "Evaluator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Evaluator": {
+      "main": [
+        [
+          {
+            "node": "Evaluator Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Evaluator Prompt": {
+      "main": [
+        [
+          {
+            "node": "Kirim Hasil Evaluasi",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Kirim Hasil Evaluasi": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Generate Pertanyaan",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Evaluator Prompt",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "be57b825-b4bb-467e-bd4b-877d825ecd45",
+  "meta": {
+    "instanceId": "dc96f10ae7dc95d3c138575ba243a0a167923dbcb524841d451aadf9135d5fb3"
+  },
+  "nodeGroups": [],
+  "id": "TmlPwMvg7xTiIrI0",
+  "tags": []
+}
